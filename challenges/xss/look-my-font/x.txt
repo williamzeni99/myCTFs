@@ -30,7 +30,7 @@ After HOURS or crying I casually discorver that the url param "font_url='blah bl
 in the CSP. YES YOU READ CORRECTLY THE FUCKING FONT_URL STRINGS ENDS UP IN THE CSP HAHAHAH DIOPORCO. 
 
 So I looked in the CSP documentation to find any available attribute to add to the CSP to enable
-an inline script. After a while I understood that there was no way to overwrite already added
+an inline script. After a while I understood that there was no way to overwrite an already added
 attribute. For instance I cannot rewrite default-src '*', bacause default-src is already present. 
 The only way to overwrite a behavior is to describe a more specific one. 
 

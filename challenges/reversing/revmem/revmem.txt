@@ -1,0 +1,50 @@
+analyzing this file in ghidra we see first of all that there is no function main, this is because it misses the
+symbols and the main is called in another way. so we open the caller of libc_start_main, whose first parameter is 
+the main of the program. we can modify the signature of this function in "void main (int argc, char ** argv)".
+
+reading the code we se that, after checking that there is an argument, the function generate something and compare 
+it with the argument. if they coincide then says that the flag is correct, otherwise it says that it's wrong.
+
+so we can do some little changes in the code in order to make it slightly more readable
+
+this is its code now:'''
+void main(int argc,char **argv){
+  int isTrue;
+  char *realFlag;
+  
+  if (argc < 2) {
+    puts("Gimme the flag!");
+                    /* WARNING: Subroutine does not return */
+    exit(-1);
+  }
+  realFlag = generate_flag();
+  isTrue = strncmp(realFlag,argv[1],0x1e);
+  if (isTrue == 0) {
+    puts("You got the flag!");
+  }
+  else {
+    puts("Wrong!");
+  }
+  return;
+}
+'''
+
+We have three options to get the flag:
+
+1) try to reverse the generate_flag function --> this is the longest way to solve the problem
+
+2) since the flag is saved in a variable and passed as parameter in a function it will be placed in some register.
+  then we can run the program in gdb placing a breakpoint at the call strncmp. we can see that the flag is everywhere
+
+3) since the flag is passed as parameter to a strcmp that is a library function, we can install ltrace (debagger that 
+  trace library call functions) and run it attached to the program (ltrace ./revmem asd) with random stuff as parameter.
+  in this way we obtain this output: "
+  malloc(30) = 0x5607b34632a0
+  strncmp("flag{this_was_an_easy_reverse}", "asd", 30) = 5
+  puts("Wrong!"Wrong!) = 7
+  "
+  this method is the fastest and easiest one
+
+the flag is: '''
+flag{this_was_an_easy_reverse}
+'''
