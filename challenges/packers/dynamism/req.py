@@ -32,3 +32,6 @@ messages_to_send = [b'\x04\x00\x00\x00\x00\x00\x00\x00', b'data']
 
 communicate_with_server(server_host, server_port, messages_to_send)
 
+'''
+this file was not necessary at the end but it is a way to directly download the portion of code
+'''
