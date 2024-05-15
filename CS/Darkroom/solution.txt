@@ -1,0 +1,12 @@
+this was a reverse engineering challenge
+
+z3 and angr didn't work and they were my firsts attempts. 
+Then I started to read carefully the code and I understood
+it was a maze. I had to start from position (0, 1) and I had to
+achive position (0x1e, 0x39). 
+The walls were included in the binary, so I retrived them as a hex list
+and I manage to rebuild the maze as a list of tuples. 
+Then, with the help of chatgpt, I resolved the maze pattern. 
+In addition, I have plot the maze in the walls.py, if you want to take a look. 
+
+The x.py prints the string to put in the challenge to read the flag
